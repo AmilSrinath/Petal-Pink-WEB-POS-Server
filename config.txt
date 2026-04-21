@@ -1,13 +1,13 @@
-db.name=petal_pink_pos_test_1
+db.name=petal_pink_pos_1
 db.username=root
 db.password=12345678
 
 
 # Delivery Fee
-delivery.fee=350
+delivery.fee=425
 delivery.add_cost_per_1kg=100
 
-# Payment per order (commission %)
+# Payment per order
 payment.tier.0to5000=30
 payment.tier.5001to10000=35
 payment.tier.10001to20000=40

@@ -135,4 +135,26 @@ public class DeliveryOrderRepository {
         String sql = "UPDATE pos_main_delivery_order_tb SET remark = ? WHERE delivery_id = ?";
         jdbcTemplate.update(sql, remark, deliveryId);
     }
+
+    public String getNextTrackingCodeFromSequence() {
+        String sql =
+                "SELECT MAX(CAST(SUBSTRING(order_code, 4) AS UNSIGNED)) " +
+                        "FROM pos_main_delivery_order_tb " +
+                        "WHERE order_code REGEXP '^NPP[0-9]{7}$'";
+
+        Long maxNum = jdbcTemplate.queryForObject(sql, Long.class);
+        long next = (maxNum != null ? maxNum : 0L) + 1;
+        return String.format("NPP%07d", next);
+    }
+
+    public void assignTrackingCode(Integer deliveryId, String trackingCode) {
+        jdbcTemplate.update(
+                "UPDATE pos_main_delivery_order_tb SET order_code = ?, status_id = 3 WHERE delivery_id = ?",
+                trackingCode, deliveryId
+        );
+        jdbcTemplate.update(
+                "UPDATE pos_main_order_tb SET bill_no = ? WHERE delivery_order_id = ?",
+                trackingCode, deliveryId
+        );
+    }
 }

@@ -147,6 +147,22 @@ public class CreateOrderRepository {
         });
     }
 
+    // create payment record with status_id = 9 (Not Paid)
+    public void createPayment(Integer orderId, Integer customerId, CreateOrderRequestDTO req) {
+        String sql =
+                "INSERT INTO pos_payment_tb " +
+                        "(order_id, customer_id, cod, total_amount, payment_status, created_Date, edited_Date, user_id, status_id) " +
+                        "VALUES (?, ?, ?, ?, 0, NOW(), NOW(), ?, 9)";
+
+        jdbcTemplate.update(sql,
+                orderId,
+                customerId,
+                req.getCodAmount(),
+                req.getTotalOrderPrice(),
+                req.getUserId()
+        );
+    }
+
     // update order_code (tracking code) by delivery_id
     public void updateOrderCode(Integer deliveryId, String orderCode) {
         String sql = "UPDATE pos_main_delivery_order_tb SET order_code = ? WHERE delivery_id = ?";

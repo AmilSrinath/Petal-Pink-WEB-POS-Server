@@ -27,6 +27,9 @@ public class CreateOrderService {
         // step 4 - create order details
         createOrderRepository.createOrderDetails(req.getItems(), orderId, req.getUserId());
 
+        // step 5 - create payment record (status_id = 9, Not Paid)
+        createOrderRepository.createPayment(orderId, customerId, req);
+
         return deliveryOrderId;
     }
 

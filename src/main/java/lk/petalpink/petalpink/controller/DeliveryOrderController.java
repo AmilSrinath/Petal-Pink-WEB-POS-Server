@@ -60,4 +60,14 @@ public class DeliveryOrderController {
     public ResponseEntity<List<OrderDTO>> getOrdersWithCustomers() {
         return ResponseEntity.ok(orderService.getOrdersWithCustomers());
     }
+
+    @PostMapping("/{deliveryId}/generate-tracking")
+    public ResponseEntity<String> generateTracking(@PathVariable Integer deliveryId) {
+        try {
+            String trackingCode = deliveryOrderService.generateAndAssignTracking(deliveryId);
+            return ResponseEntity.ok(trackingCode);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Failed to generate tracking: " + e.getMessage());
+        }
+    }
 }
