@@ -8,7 +8,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Data
 public class OrderDetailItemDTO {
+    private Integer orderDetailId;
     private Integer itemId;
+    private String itemName;
     private Integer itemBarCode;
     private Integer unitTypeId;
     private Integer printerTypeId;

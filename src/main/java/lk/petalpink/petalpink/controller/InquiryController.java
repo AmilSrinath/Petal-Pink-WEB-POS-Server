@@ -40,4 +40,14 @@ public class InquiryController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Inquiry not found");
         }
     }
+
+    @PostMapping("/inquiries")
+    public ResponseEntity<String> saveInquiry(@RequestBody InquiryDTO dto) {
+        boolean saved = inquiryService.saveInquiry(dto);
+        if (saved) {
+            return ResponseEntity.status(HttpStatus.CREATED).body("Inquiry saved successfully");
+        } else {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to save inquiry");
+        }
+    }
 }

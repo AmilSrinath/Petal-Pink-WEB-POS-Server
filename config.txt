@@ -1,4 +1,6 @@
-db.name=petal_pink_pos_1
+server_ip=localhost
+server_port=3306
+db.name=petal_pink_pos_new_20260421
 db.username=root
 db.password=12345678
 

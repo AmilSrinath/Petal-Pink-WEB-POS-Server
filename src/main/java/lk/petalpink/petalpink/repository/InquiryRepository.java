@@ -117,4 +117,28 @@ public class InquiryRepository {
         String sql = "UPDATE pos_inquiry_tb SET status_id = ?, edited_date = CURDATE() WHERE inquiry_id = ?";
         return jdbcTemplate.update(sql, statusId, inquiryId);
     }
+
+    public int saveInquiry(InquiryDTO dto) {
+        String sql =
+                "INSERT INTO pos_inquiry_tb " +
+                        "(way_bill, customer_id, customer_name, customer_phone_1, customer_phone_2, " +
+                        "company, branch, branch_contact, reson, remark, status, created_date, user_id, status_id) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), ?, ?)";
+
+        return jdbcTemplate.update(sql,
+                dto.getWayBill(),
+                dto.getCustomerId(),
+                dto.getCustomerName(),
+                dto.getCustomerPhone1(),
+                dto.getCustomerPhone2(),
+                dto.getCompany(),
+                dto.getBranch(),
+                dto.getBranchContact(),
+                dto.getReason(),
+                dto.getRemark(),
+                dto.getStatus(),
+                dto.getUserId(),
+                dto.getStatusId()
+        );
+    }
 }

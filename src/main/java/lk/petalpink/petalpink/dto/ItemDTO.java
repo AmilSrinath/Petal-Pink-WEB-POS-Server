@@ -28,4 +28,5 @@ public class ItemDTO {
     private Integer visible;
     private Double weight;
     private Integer quantity;
+    private Integer bussinessProfile;
 }

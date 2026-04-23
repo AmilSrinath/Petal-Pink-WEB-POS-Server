@@ -24,4 +24,8 @@ public class InquiryService {
     public boolean updateInquiryStatus(int inquiryId, int statusId) {
         return inquiryRepository.updateInquiryStatus(inquiryId, statusId) > 0;
     }
+
+    public boolean saveInquiry(InquiryDTO dto) {
+        return inquiryRepository.saveInquiry(dto) > 0;
+    }
 }

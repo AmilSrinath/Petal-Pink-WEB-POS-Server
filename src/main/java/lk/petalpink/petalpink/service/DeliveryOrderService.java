@@ -2,6 +2,7 @@ package lk.petalpink.petalpink.service;
 
 import lk.petalpink.petalpink.dto.DeliveryOrderDTO;
 import lk.petalpink.petalpink.dto.ItemDTO;
+import lk.petalpink.petalpink.dto.OrderDetailItemDTO;
 import lk.petalpink.petalpink.repository.DeliveryOrderRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -74,5 +75,17 @@ public class DeliveryOrderService {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    public DeliveryOrderDTO getByDeliveryId(Integer deliveryId) {
+        return deliveryOrderRepository.getByDeliveryId(deliveryId);
+    }
+
+    public List<OrderDetailItemDTO> getOrderDetailsByOrderId(Integer orderId) {
+        return deliveryOrderRepository.getOrderDetailsByOrderId(orderId);
+    }
+
+    public DeliveryOrderDTO getByOrderCode(String orderCode) {
+        return deliveryOrderRepository.getByOrderCode(orderCode);
     }
 }

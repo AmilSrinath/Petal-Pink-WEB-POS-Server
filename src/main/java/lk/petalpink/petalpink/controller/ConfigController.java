@@ -1,10 +1,13 @@
 package lk.petalpink.petalpink.controller;
 
+import lk.petalpink.petalpink.dto.BusinessProfileDTO;
+import lk.petalpink.petalpink.service.BusinessProfileService;
 import lk.petalpink.petalpink.service.ConfigService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -14,6 +17,9 @@ public class ConfigController {
 
     @Autowired
     private ConfigService configService;
+
+    @Autowired
+    private BusinessProfileService businessProfileService;
 
     @GetMapping("/delivery-fee")
     public double getDeliveryFee() {
@@ -42,5 +48,10 @@ public class ConfigController {
                 "20001to50000", configService.getTier20001To50000()
         ));
         return config;
+    }
+
+    @GetMapping("/business-profiles")
+    public List<BusinessProfileDTO> getBusinessProfiles() {
+        return businessProfileService.getAllBusinessProfiles();
     }
 }

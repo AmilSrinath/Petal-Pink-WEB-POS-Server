@@ -3,9 +3,11 @@ package lk.petalpink.petalpink.controller;
 import lk.petalpink.petalpink.dto.DeliveryOrderDTO;
 import lk.petalpink.petalpink.dto.ItemDTO;
 import lk.petalpink.petalpink.dto.OrderDTO;
+import lk.petalpink.petalpink.dto.OrderDetailItemDTO;
 import lk.petalpink.petalpink.service.DeliveryOrderService;
 import lk.petalpink.petalpink.service.OrderService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -68,6 +70,31 @@ public class DeliveryOrderController {
             return ResponseEntity.ok(trackingCode);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Failed to generate tracking: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/delivery-orders/{deliveryId}")
+    public ResponseEntity<DeliveryOrderDTO> getByDeliveryId(@PathVariable Integer deliveryId) {
+        DeliveryOrderDTO order = deliveryOrderService.getByDeliveryId(deliveryId);
+        return ResponseEntity.ok(order);
+    }
+
+    @GetMapping("/orders/{orderId}/items")
+    public ResponseEntity<List<OrderDetailItemDTO>> getOrderDetailsByOrderId(@PathVariable Integer orderId) {
+        List<OrderDetailItemDTO> items = deliveryOrderService.getOrderDetailsByOrderId(orderId);
+        if (items.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(items);
+    }
+
+    @GetMapping("/delivery-orders/tracking/{orderCode}")
+    public ResponseEntity<DeliveryOrderDTO> getByOrderCode(@PathVariable String orderCode) {
+        try {
+            DeliveryOrderDTO order = deliveryOrderService.getByOrderCode(orderCode);
+            return ResponseEntity.ok(order);
+        } catch (EmptyResultDataAccessException e) {
+            return ResponseEntity.notFound().build();
         }
     }
 }
