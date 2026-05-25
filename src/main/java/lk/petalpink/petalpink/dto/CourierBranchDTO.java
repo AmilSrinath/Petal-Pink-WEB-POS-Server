@@ -14,7 +14,8 @@ public class CourierBranchDTO {
     private String branchContact;
     private LocalDateTime createdDate;
     private LocalDateTime editedDate;
-    private Integer companyId;
+    private String company;        // changed from Integer companyId
+    private Integer companyId;     // keep this for save/update operations
     private Integer status;
     private Integer userId;
 }

@@ -8,13 +8,16 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/courier-branches") @CrossOrigin(origins = "http://localhost:5173")
+@RequestMapping("/api/courier-branches")
+@CrossOrigin(origins = "http://localhost:5173")
 public class CourierBranchController {
     @Autowired
     private CourierBranchService service;
 
     @PostMapping
-    public String create(@RequestBody CourierBranchDTO dto) { return service.create(dto); }
+    public String create(@RequestBody CourierBranchDTO dto) {
+        return service.create(dto);
+    }
 
     @GetMapping
     public List<CourierBranchDTO> getAll() { return service.getAll(); }

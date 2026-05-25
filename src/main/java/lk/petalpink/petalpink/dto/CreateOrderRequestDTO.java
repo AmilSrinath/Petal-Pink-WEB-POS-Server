@@ -18,6 +18,7 @@ public class CreateOrderRequestDTO {
     private String phoneTwo;
     private String address;
     private Integer userId;
+    private String customerNumber;
 
     // delivery order
     private String websiteOrderId;
@@ -36,6 +37,9 @@ public class CreateOrderRequestDTO {
     private Double totalOrderPrice;
     private Double paidAmount;
     private Integer paymentTypeId;
+
+    private Integer courierBagId;
+    private String courierBagName;
 
     // order details
     private List<OrderDetailItemDTO> items;

@@ -4,6 +4,7 @@ import lk.petalpink.petalpink.dto.BusinessProfileDTO;
 import lk.petalpink.petalpink.service.BusinessProfileService;
 import lk.petalpink.petalpink.service.ConfigService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -53,5 +54,22 @@ public class ConfigController {
     @GetMapping("/business-profiles")
     public List<BusinessProfileDTO> getBusinessProfiles() {
         return businessProfileService.getAllBusinessProfiles();
+    }
+
+    @GetMapping("/is-print")
+    public int getIsPrint() {
+        return configService.getIsPrint();
+    }
+
+    @GetMapping("/auto-generate-id")
+    public int getAutoGenerateId() {
+        return configService.getAutoGenerateId();
+    }
+
+    @GetMapping("/courier-bags/config")
+    public ResponseEntity<?> getCourierBagsConfig() {
+        return ResponseEntity.ok(Map.of(
+                "isShowCourierBags", configService.getIsShowCourierBags()
+        ));
     }
 }

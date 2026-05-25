@@ -15,23 +15,42 @@ public class CourierBranchRepository {
     private JdbcTemplate jdbcTemplate;
 
     public int save(CourierBranchDTO dto) {
-        String sql = "INSERT INTO pos_courier_branch_tb (branch_name, branch_contact, created_date, edited_date, company_id, status, user_id) VALUES (?, ?, ?, ?, ?, ?, ?)";
-        return jdbcTemplate.update(sql, dto.getBranchName(), dto.getBranchContact(), LocalDateTime.now(), LocalDateTime.now(), dto.getCompanyId(), dto.getStatus(), dto.getUserId());
+        String sql = "INSERT INTO pos_courier_branch_tb (branch_name, branch_contact, created_date, edited_date, company_id, status, user_id) VALUES (?, ?, ?, ?, ?, 1, ?)";
+        return jdbcTemplate.update(sql,
+                dto.getBranchName(), dto.getBranchContact(),
+                LocalDateTime.now(), LocalDateTime.now(),
+                dto.getCompanyId(), dto.getUserId()
+        );
     }
 
     public List<CourierBranchDTO> findAll() {
-        String sql = "SELECT * FROM pos_courier_branch_tb WHERE status != 0";
+        String sql = """
+            SELECT b.*, c.company_name AS company
+            FROM pos_courier_branch_tb b
+            JOIN pos_courier_company_tb c ON b.company_id = c.company_id
+            WHERE b.status != 0
+        """;
         return jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(CourierBranchDTO.class));
     }
 
     public List<CourierBranchDTO> findByCompanyId(int companyId) {
-        String sql = "SELECT * FROM pos_courier_branch_tb WHERE company_id = ? AND status != 0";
+        String sql = """
+            SELECT b.*, c.company_name AS company
+            FROM pos_courier_branch_tb b
+            JOIN pos_company_tb c ON b.company_id = c.company_id
+            WHERE b.company_id = ? AND b.status != 0
+        """;
         return jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(CourierBranchDTO.class), companyId);
     }
 
     public int update(CourierBranchDTO dto) {
         String sql = "UPDATE pos_courier_branch_tb SET branch_name=?, branch_contact=?, edited_date=?, company_id=?, status=?, user_id=? WHERE branch_id=?";
-        return jdbcTemplate.update(sql, dto.getBranchName(), dto.getBranchContact(), LocalDateTime.now(), dto.getCompanyId(), dto.getStatus(), dto.getUserId(), dto.getBranchId());
+        return jdbcTemplate.update(sql,
+                dto.getBranchName(), dto.getBranchContact(),
+                LocalDateTime.now(),
+                dto.getCompanyId(),           // still use companyId for FK
+                dto.getStatus(), dto.getUserId(), dto.getBranchId()
+        );
     }
 
     public int softDelete(int id) {

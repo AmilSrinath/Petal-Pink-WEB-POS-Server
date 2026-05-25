@@ -6,7 +6,7 @@ db.password=12345678
 
 
 # Delivery Fee
-delivery.fee=425
+delivery.fee=350
 delivery.add_cost_per_1kg=100
 
 # Payment per order
@@ -14,3 +14,13 @@ payment.tier.0to5000=30
 payment.tier.5001to10000=35
 payment.tier.10001to20000=40
 payment.tier.20001to50000=50
+
+#print info
+is_print = 0
+
+#auto generate id
+auto_generate_id = 0
+
+#courier bags
+is_show_courier_bags = 1
+courier_bags_subcategory = 4

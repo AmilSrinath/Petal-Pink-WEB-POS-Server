@@ -3,9 +3,11 @@ package lk.petalpink.petalpink.controller;
 import lk.petalpink.petalpink.dto.ItemDTO;
 import lk.petalpink.petalpink.service.ItemService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/items")
@@ -16,8 +18,12 @@ public class ItemController {
     private ItemService itemService;
 
     @PostMapping
-    public String createItem(@RequestBody ItemDTO dto) {
-        return itemService.createItem(dto);
+    public ResponseEntity<?> createItem(@RequestBody ItemDTO dto) {
+        Long newId = itemService.createItem(dto);
+        if (newId == null || newId <= 0) {
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to create item"));
+        }
+        return ResponseEntity.ok(Map.of("itemId", newId));
     }
 
     @GetMapping
@@ -33,5 +39,16 @@ public class ItemController {
     @DeleteMapping("/{id}")
     public String deleteItem(@PathVariable int id) {
         return itemService.deleteItem(id);
+    }
+
+    @GetMapping("/grn")
+    public List<ItemDTO> getAllGRNItems() {
+        return itemService.getAllGRNItems();
+    }
+
+    @GetMapping("/courier-bags")
+    public ResponseEntity<?> getCourierBagItems() {
+        List<ItemDTO> items = itemService.getCourierBagItems();
+        return ResponseEntity.ok(items);
     }
 }

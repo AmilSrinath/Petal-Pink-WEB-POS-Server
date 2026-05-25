@@ -71,7 +71,6 @@ public class DeliveryOrderService {
             DocPrintJob job = printer.createPrintJob();
             Doc doc = new SimpleDoc(tspl.getBytes(), DocFlavor.BYTE_ARRAY.AUTOSENSE, null);
             job.print(doc, null);
-            System.out.println("Label printed: " + trackingId);
         } catch (Exception e) {
             e.printStackTrace();
         }

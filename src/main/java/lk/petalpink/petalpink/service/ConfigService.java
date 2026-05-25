@@ -24,6 +24,20 @@ public class ConfigService {
     @Value("${payment.tier.20001to50000}")
     private int tier20001To50000;
 
+    @Value("${is_print}")
+    private int isPrint;
+
+    @Value("${auto_generate_id}")
+    private int autoGenerateId;
+
+    public int getAutoGenerateId() {
+        return autoGenerateId;
+    }
+
+    public int getIsPrint() {
+        return isPrint;
+    }
+
     public double getDeliveryFee() {
         return deliveryFee;
     }
@@ -44,4 +58,18 @@ public class ConfigService {
     public int getTier5001To10000() { return tier5001To10000; }
     public int getTier10001To20000() { return tier10001To20000; }
     public int getTier20001To50000() { return tier20001To50000; }
+
+    @Value("${courier_bags_subcategory}")
+    private int courierBagsSubcategory;
+
+    public int getCourierBagsSubcategory() {
+        return courierBagsSubcategory;
+    }
+
+    @Value("${is_show_courier_bags}")
+    private int isShowCourierBags;
+
+    public int getIsShowCourierBags() {
+        return isShowCourierBags;
+    }
 }

@@ -28,5 +28,15 @@ public class ItemDTO {
     private Integer visible;
     private Double weight;
     private Integer quantity;
+    private Integer unitTypeId;
+    private Integer isLowStockAlert;
+    private Double lowStockAlert;
+
+    private Double lastGrnPrice;
+
     private Integer bussinessProfile;
+    private String bussinessProfileName;
+
+    private String mainItemCategoryName;
+    private String subItemCategoryName;
 }

@@ -32,20 +32,21 @@ public class CreateOrderRepository {
             // update name and address if changed
             String updateSql =
                     "UPDATE pos_main_customer_tb " +
-                            "SET customer_name = ?, address = ?, phone_two = ? " +
+                            "SET customer_name = ?, address = ?, phone_two = ?, customer_number = ? " +
                             "WHERE phone_one = ?";
             jdbcTemplate.update(updateSql,
                     req.getCustomerName(),
                     req.getAddress(),
                     req.getPhoneTwo(),
+                    req.getCustomerNumber(),
                     req.getPhoneOne());
             return existing.get(0);
         } else {
             // insert new customer
             String insertSql =
                     "INSERT INTO pos_main_customer_tb " +
-                            "(customer_name, phone_one, phone_two, address, status, user_id, visible) " +
-                            "VALUES (?, ?, ?, ?, 1, ?, 1)";
+                            "(customer_name, phone_one, phone_two, address, status, user_id, visible, customer_number) " +
+                            "VALUES (?, ?, ?, ?, 1, ?, 1, ?)";
 
             KeyHolder keyHolder = new GeneratedKeyHolder();
             jdbcTemplate.update(con -> {
@@ -55,6 +56,7 @@ public class CreateOrderRepository {
                 ps.setString(3, req.getPhoneTwo());
                 ps.setString(4, req.getAddress());
                 ps.setObject(5, req.getUserId());
+                ps.setObject(6, req.getCustomerNumber());
                 return ps;
             }, keyHolder);
 
