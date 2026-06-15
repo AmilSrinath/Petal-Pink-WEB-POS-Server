@@ -31,6 +31,7 @@ public class ItemDTO {
     private Integer unitTypeId;
     private Integer isLowStockAlert;
     private Double lowStockAlert;
+    private Integer isSellingItem;
 
     private Double lastGrnPrice;
 

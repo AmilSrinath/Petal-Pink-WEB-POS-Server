@@ -76,4 +76,14 @@ public class UserRepository {
             }
         }, username);
     }
+
+    public void updateUsername(Integer userId, String newUsername) {
+        String sql = "UPDATE pos_main_user_tb SET username = ? WHERE user_id = ?";
+        jdbcTemplate.update(sql, newUsername, userId);
+    }
+
+    public void updatePassword(Integer userId, String hashedPassword) {
+        String sql = "UPDATE pos_main_user_tb SET password = ? WHERE user_id = ?";
+        jdbcTemplate.update(sql, hashedPassword, userId);
+    }
 }

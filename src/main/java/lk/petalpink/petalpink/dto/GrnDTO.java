@@ -12,11 +12,12 @@ public class GrnDTO {
     private Integer grnId;
     private String invoiceNo;
     private Integer supplierId;
+    private String supplierName;
     private Double totalPrice;
     private Double totalDiscount;
     private LocalDate createdDate;
     private Integer status;
-    private Integer stockLocationId;   // ← NEW field
+    private Integer stockLocationId;
     private Integer userId;
     private Integer visible;
 }

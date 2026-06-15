@@ -75,7 +75,7 @@ public class ItemRepository {
         LEFT JOIN pos_main_item_category_tb mc ON i.main_item_category_id = mc.main_item_category_id
         LEFT JOIN pos_sub_item_category_tb sc ON i.sub_item_category_id = sc.sub_item_category_id
         LEFT JOIN pos_main_bussiness_profile bp_main ON i.bussiness_profile = bp_main.bussiness_profile_id
-        WHERE i.status != 0
+        WHERE i.status != 0 ORDER BY i.item_id ASC
         """;
         return jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(ItemDTO.class));
     }

@@ -69,8 +69,9 @@ public class CreateOrderRepository {
         String sql =
                 "INSERT INTO pos_main_delivery_order_tb " +
                         "(customer_id, website_order_id, order_code, cod_amount, weight, remark, " +
-                        "order_type, status, status_id, is_free_delivery, is_return, is_exchange, user_id) " +
-                        "VALUES (?, ?, '', ?, ?, ?, ?, 1, 2, ?, 0, ?, ?)";
+                        "order_type, status, status_id, is_free_delivery, is_return, is_exchange, user_id, " +
+                        "courier_bag_id, courier_bag_name) " +
+                        "VALUES (?, ?, '', ?, ?, ?, ?, 1, 2, ?, 0, ?, ?, ?, ?)";
 
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcTemplate.update(con -> {
@@ -84,6 +85,8 @@ public class CreateOrderRepository {
             ps.setObject(7, req.getIsFreeDelivery());
             ps.setObject(8, req.getIsExchange());
             ps.setObject(9, req.getUserId());
+            ps.setObject(10, req.getCourierBagId());    // ← add
+            ps.setString(11, req.getCourierBagName());  // ← add
             return ps;
         }, keyHolder);
 
@@ -199,12 +202,15 @@ public class CreateOrderRepository {
         jdbcTemplate.update(
                 "UPDATE pos_main_delivery_order_tb SET " +
                         "customer_id=?, order_code=?, cod_amount=?, weight=?, remark=?, order_type=?, " +
-                        "is_free_delivery=?, is_return=?, is_exchange=?, user_id=?, status_id=? " +
+                        "is_free_delivery=?, is_return=?, is_exchange=?, user_id=?, status_id=?, " +
+                        "courier_bag_id=?, courier_bag_name=? " +   // ← add
                         "WHERE delivery_id=?",
                 customerId, req.getOrderCode(), req.getCodAmount(), req.getWeight(),
                 req.getRemark(), req.getOrderType(), req.getIsFreeDelivery(),
                 req.getIsReturn(), req.getIsExchange(), req.getUserId(),
-                req.getStatusId(), req.getDeliveryId()
+                req.getStatusId(),
+                req.getCourierBagId(), req.getCourierBagName(),  // ← add
+                req.getDeliveryId()
         );
 
         // 3. get order_id by delivery_id

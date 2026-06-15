@@ -1,9 +1,9 @@
 package lk.petalpink.petalpink.controller;
 
+import lk.petalpink.petalpink.dto.StockAdjustmentDTO;
 import lk.petalpink.petalpink.dto.StockDTO;
 import lk.petalpink.petalpink.dto.StockDetailsDTO;
 import lk.petalpink.petalpink.dto.StockInitDTO;
-import lk.petalpink.petalpink.dto.StockTransactionDTO;
 import lk.petalpink.petalpink.service.StockService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -12,7 +12,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/stocks")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = "*")
 public class StockController {
 
     @Autowired
@@ -20,25 +20,27 @@ public class StockController {
 
     /**
      * POST /api/stocks/add
-     * Add stock — GRN receive, return, adjustment in
+     * Add stock — manual adjustment in (e.g. found stock, correction).
+     * Body: StockAdjustmentDTO  (qty must be > 0)
      */
-//    @PostMapping("/add")
-//    public String addStock(@RequestBody StockTransactionDTO dto) {
-//        return stockService.addStock(dto);
-//    }
+    @PostMapping("/add")
+    public String addStock(@RequestBody StockAdjustmentDTO dto) {
+        return stockService.addStock(dto);
+    }
 
     /**
      * POST /api/stocks/reduce
-     * Reduce stock — sale, damage write-off, adjustment out
+     * Reduce stock — manual adjustment out (e.g. damage write-off, correction).
+     * Body: StockAdjustmentDTO  (qty must be > 0; service makes it negative internally)
      */
-//    @PostMapping("/reduce")
-//    public String reduceStock(@RequestBody StockTransactionDTO dto) {
-//        return stockService.reduceStock(dto);
-//    }
+    @PostMapping("/reduce")
+    public String reduceStock(@RequestBody StockAdjustmentDTO dto) {
+        return stockService.reduceStock(dto);
+    }
 
     /**
      * GET /api/stocks
-     * Current stock levels (master table)
+     * Current stock levels (master table).
      */
     @GetMapping
     public List<StockDTO> getAllMasterStocks() {
@@ -47,7 +49,7 @@ public class StockController {
 
     /**
      * GET /api/stocks/{stockId}/details
-     * Full transaction history for one stock item
+     * Full transaction history for one stock item.
      */
     @GetMapping("/{stockId}/details")
     public List<StockDetailsDTO> getDetailsByStockId(@PathVariable int stockId) {
@@ -56,7 +58,7 @@ public class StockController {
 
     /**
      * GET /api/stocks/details
-     * All transaction history
+     * All transaction history.
      */
     @GetMapping("/details")
     public List<StockDetailsDTO> getAllDetails() {

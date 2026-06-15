@@ -13,4 +13,5 @@ public class StockInitDTO {
     private Integer unitType;
     private Integer isLowStockAlert;
     private Double lowStockAlert;
+    private Integer isSellingItem;
 }

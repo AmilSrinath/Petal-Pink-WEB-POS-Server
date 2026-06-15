@@ -13,8 +13,10 @@ public class StockDTO {
     private String itemName;
     private Double qty;
     private Integer unitType;
+    private String unitTypeName;
     private Integer status;
     private Integer isLowStockAlert;
     private Double lowStockAlert;
     private String itemCodePrefix;
+    private Integer isSellingItem;
 }

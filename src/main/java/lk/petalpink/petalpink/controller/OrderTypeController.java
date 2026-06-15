@@ -8,7 +8,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/order-types") @CrossOrigin(origins = "http://localhost:5173")
+@RequestMapping("/api/order-types")
+@CrossOrigin(origins = "*")
 public class OrderTypeController {
     @Autowired
     private OrderTypeService service;

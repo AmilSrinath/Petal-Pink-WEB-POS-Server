@@ -41,6 +41,10 @@ public class UpdateOrderRequestDTO {
     private Double paidAmount;
     private Integer paymentTypeId;
 
+    // add inside UpdateOrderRequestDTO
+    private Integer courierBagId;
+    private String  courierBagName;
+
     // order details
     private List<OrderDetailItemDTO> items;
 }

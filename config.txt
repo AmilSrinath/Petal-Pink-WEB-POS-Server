@@ -4,9 +4,8 @@ db.name=petal_pink_pos_new_20260421
 db.username=root
 db.password=12345678
 
-
 # Delivery Fee
-delivery.fee=350
+delivery.fee=390
 delivery.add_cost_per_1kg=100
 
 # Payment per order
@@ -16,10 +15,10 @@ payment.tier.10001to20000=40
 payment.tier.20001to50000=50
 
 #print info
-is_print = 0
+is_print = 1
 
 #auto generate id
-auto_generate_id = 0
+auto_generate_id = 1
 
 #courier bags
 is_show_courier_bags = 1

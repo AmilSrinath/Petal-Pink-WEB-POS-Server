@@ -20,37 +20,82 @@ public class StockRepository {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    // ─────────────────────────────────────────────────────────────────────────
+    //  NEW — look up master record by stock_id (PK)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Find a stock master row by its own PK (stock_id).
+     * Used by the adjustment endpoints so they can validate the record
+     * and check the current qty before writing a detail row.
+     */
+    public StockDTO findByStockId(int stockId) {
+        String sql = """
+            SELECT s.*, i.item_code_prefix, u.unit_type AS unit_type_name
+            FROM pos_inv_stock_tb s
+            LEFT JOIN pos_main_item_tb  i ON s.item_id      = i.item_id
+            LEFT JOIN pos_main_unit_type_tb u ON s.unit_type = u.unit_type_id
+            WHERE s.stock_id = ? AND s.status != 0
+            LIMIT 1
+            """;
+        List<StockDTO> result = jdbcTemplate.query(
+                sql, new BeanPropertyRowMapper<>(StockDTO.class), stockId);
+
+        System.out.println("stockId : "+stockId);
+        return result.isEmpty() ? null : result.get(0);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  NEW — insert a manual adjustment detail row
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Inserts one row into pos_inv_stock_details_tb for a manual adjustment.
+     * batch_reg_id is intentionally NULL for manual adjustments
+     * (only GRN / production rows carry a batch reference).
+     */
+    public void insertAdjustmentDetail(StockDetailsDTO dto) {
+        String sql = """
+            INSERT INTO pos_inv_stock_details_tb
+                (stock_location_id, batch_reg_id, stock_adj_type_id, stock_id, stock_name,
+                 cost_price, last_grn_price, plus_qty, minus_qty,
+                 is_init_qty, status, visible, created_date, edited_date, user_id)
+            VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)
+            """;
+        jdbcTemplate.update(sql,
+                dto.getStockLocationId(),
+                dto.getStockAdjTypeId(),
+                dto.getStockId(),
+                dto.getStockName(),
+                dto.getCostPrice(),
+                dto.getLastGrnPrice(),
+                dto.getPlusQty(),
+                dto.getMinusQty(),
+                dto.getIsInitQty(),
+                dto.getStatus(),
+                dto.getVisible(),
+                dto.getCreatedDate(),
+                dto.getUserId()
+        );
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  EXISTING METHODS (unchanged)
+    // ─────────────────────────────────────────────────────────────────────────
+
     public StockDTO findByItemId(int itemId) {
         String sql = """
-        SELECT s.*, i.item_code_prefix
-        FROM pos_inv_stock_tb s
-        LEFT JOIN pos_main_item_tb i ON s.item_id = i.item_id
-        WHERE s.item_id = ? LIMIT 1
-        """;
+            SELECT s.*, i.item_code_prefix
+            FROM pos_inv_stock_tb s
+            LEFT JOIN pos_main_item_tb i ON s.item_id = i.item_id
+            WHERE s.item_id = ? LIMIT 1
+            """;
         List<StockDTO> result = jdbcTemplate.query(sql,
                 new BeanPropertyRowMapper<>(StockDTO.class), itemId);
         return result.isEmpty() ? null : result.get(0);
     }
 
-    public int insertMaster(int itemId, String itemName, double initialQty, Integer unitType) {
-        String sql = "INSERT INTO pos_inv_stock_tb (item_id, item_name, qty, unit_type, status, is_low_stock_alert, low_stock_alert) " +
-                "VALUES (?, ?, ?, ?, 1, ?, ?)";
-        KeyHolder keyHolder = new GeneratedKeyHolder();
-        jdbcTemplate.update(con -> {
-            PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-            ps.setInt(1, itemId);
-            ps.setString(2, itemName);
-            ps.setDouble(3, initialQty);
-            if (unitType != null) ps.setInt(4, unitType);
-            else ps.setNull(4, java.sql.Types.INTEGER);
-            ps.setNull(5, java.sql.Types.INTEGER);
-            ps.setNull(6, java.sql.Types.DECIMAL);
-            return ps;
-        }, keyHolder);
-        return keyHolder.getKey().intValue();
-    }
-
-    public int updateMasterQty(int itemId, int quantityChange) {
+    public int updateMasterQty(int itemId, double quantityChange) {
         String sql = "UPDATE pos_inv_stock_tb " +
                 "SET qty = qty + ?, eddited_date = CURRENT_TIMESTAMP " +
                 "WHERE item_id = ?";
@@ -59,25 +104,14 @@ public class StockRepository {
 
     public List<StockDTO> findAllMaster() {
         String sql = """
-        SELECT s.*, i.item_code_prefix
-        FROM pos_inv_stock_tb s
-        LEFT JOIN pos_main_item_tb i ON s.item_id = i.item_id
-        WHERE s.status != 0
-        """;
+            SELECT s.*, i.item_code_prefix, u.unit_type AS unit_type_name
+            FROM pos_inv_stock_tb s
+            LEFT JOIN pos_main_item_tb i ON s.item_id = i.item_id
+            LEFT JOIN pos_main_unit_type_tb u ON s.unit_type = u.unit_type_id
+            WHERE s.status != 0
+            """;
         return jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(StockDTO.class));
     }
-
-//    public int insertDetail(StockDetailsDTO dto) {
-//        String sql = "INSERT INTO pos_inv_stock_details_tb " +
-//                "(stock_id, grn_id, item_id, " +
-//                "stock_category_id, stock_name, cost_price, last_grn_price, quantity, status, user_id, visible) " +
-//                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-//        return jdbcTemplate.update(sql,
-//                dto.getStockId(), dto.getGrnId(), dto.getItemId(),
-//                dto.getStockCategoryId(), dto.getStockName(),
-//                dto.getCostPrice(), dto.getLastGrnPrice(), dto.getQuantity(),
-//                dto.getStatus(), dto.getUserId(), dto.getVisible());
-//    }
 
     public List<StockDetailsDTO> findDetailsByStockId(int stockId) {
         String sql = "SELECT * FROM pos_inv_stock_details_tb WHERE stock_id = ? ORDER BY stock_details_id DESC";
@@ -96,41 +130,15 @@ public class StockRepository {
         return result.isEmpty() ? Optional.empty() : Optional.of(result.get(0));
     }
 
-    public void insert(int itemId, String itemName, int qty) {
-        String sql = "INSERT INTO pos_inv_stock_tb (item_id, item_name, qty, status) " +
-                "VALUES (?, ?, ?, 1)";
-        jdbcTemplate.update(sql, itemId, itemName, qty);
-    }
-
-    public void incrementQty(int itemId, int qty) {
-        String sql = "UPDATE pos_inv_stock_tb " +
-                "SET qty = qty + ?, eddited_date = NOW() WHERE item_id = ?";
-        jdbcTemplate.update(sql, qty, itemId);
-    }
-
-    public void insert(int itemId, String itemName, double qty) {
-        String sql = "INSERT INTO pos_inv_stock_tb (item_id, item_name, qty, status) " +
-                "VALUES (?, ?, ?, 1)";
-        jdbcTemplate.update(sql, itemId, itemName, qty);
-    }
-
-    public void incrementQty(int itemId, double qty) {
-        String sql = "UPDATE pos_inv_stock_tb " +
-                "SET qty = qty + ?, eddited_date = NOW() WHERE item_id = ?";
-        jdbcTemplate.update(sql, qty, itemId);
-    }
-
     public void insert(int itemId, String itemName, double qty, Integer unitType) {
         String sql = "INSERT INTO pos_inv_stock_tb (item_id, item_name, qty, unit_type, status, is_low_stock_alert, low_stock_alert) " +
                 "VALUES (?, ?, ?, ?, 1, ?, ?)";
         jdbcTemplate.update(sql, itemId, itemName, qty, unitType, null, null);
     }
 
-    public int updateMasterQty(int itemId, double quantityChange) {
-        String sql = "UPDATE pos_inv_stock_tb " +
-                "SET qty = qty + ?, eddited_date = CURRENT_TIMESTAMP " +
-                "WHERE item_id = ?";
-        return jdbcTemplate.update(sql, quantityChange, itemId);
+    public void incrementQty(int itemId, double qty) {
+        String sql = "UPDATE pos_inv_stock_tb SET qty = qty + ?, eddited_date = NOW() WHERE item_id = ?";
+        jdbcTemplate.update(sql, qty, itemId);
     }
 
     public int updateLowStockAlert(int itemId, int isLowStockAlert, double lowStockAlert) {
@@ -141,10 +149,11 @@ public class StockRepository {
     }
 
     public int insertMaster(int itemId, String itemName, double initialQty,
-                            Integer unitType, Integer isLowStockAlert, Double lowStockAlert) {
+                            Integer unitType, Integer isLowStockAlert, Double lowStockAlert,
+                            Integer isSellingItem) {
         String sql = "INSERT INTO pos_inv_stock_tb " +
-                "(item_id, item_name, qty, unit_type, status, is_low_stock_alert, low_stock_alert) " +
-                "VALUES (?, ?, ?, ?, 1, ?, ?)";
+                "(item_id, item_name, qty, unit_type, status, is_low_stock_alert, low_stock_alert, is_selling_item) " +
+                "VALUES (?, ?, ?, ?, 1, ?, ?, ?)";
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcTemplate.update(con -> {
             PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
@@ -157,24 +166,24 @@ public class StockRepository {
             else ps.setNull(5, java.sql.Types.INTEGER);
             if (lowStockAlert != null) ps.setDouble(6, lowStockAlert);
             else ps.setNull(6, java.sql.Types.DECIMAL);
+            if (isSellingItem != null) ps.setInt(7, isSellingItem);
+            else ps.setNull(7, java.sql.Types.INTEGER);
             return ps;
         }, keyHolder);
         return keyHolder.getKey().intValue();
     }
 
     public void updateAlertAndUnitType(int itemId, Integer unitType,
-                                       Integer isLowStockAlert, Double lowStockAlert) {
+                                       Integer isLowStockAlert, Double lowStockAlert,
+                                       Integer isSellingItem) {
         String sql = "UPDATE pos_inv_stock_tb " +
-                "SET unit_type = ?, is_low_stock_alert = ?, low_stock_alert = ?, " +
+                "SET unit_type = ?, is_low_stock_alert = ?, low_stock_alert = ?, is_selling_item = ?, " +
                 "eddited_date = CURRENT_TIMESTAMP WHERE item_id = ?";
-        jdbcTemplate.update(sql, unitType, isLowStockAlert, lowStockAlert, itemId);
+        jdbcTemplate.update(sql, unitType, isLowStockAlert, lowStockAlert, isSellingItem, itemId);
     }
 
-    // Replace your existing void insert() with this:
     public int insertAndGetId(int itemId, String itemName, int qty) {
-        String sql = "INSERT INTO pos_inv_stock_tb (item_id, item_name, qty, status) " +
-                "VALUES (?, ?, ?, 1)";
-
+        String sql = "INSERT INTO pos_inv_stock_tb (item_id, item_name, qty, status) VALUES (?, ?, ?, 1)";
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcTemplate.update(con -> {
             PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
@@ -183,22 +192,6 @@ public class StockRepository {
             ps.setInt(3, qty);
             return ps;
         }, keyHolder);
-
         return keyHolder.getKey().intValue();
     }
-
-    // Recalculate master stock qty by summing plusQty of all active batch profiles for an item
-//    public int recalculateQtyByItemId(int itemId) {
-//        String sql = """
-//        UPDATE pos_inv_stock_tb s
-//        SET s.qty = (
-//            SELECT COALESCE(SUM(bp.plus_qty), 0)
-//            FROM pos_inv_batch_profile bp
-//            WHERE bp.item_id = ?
-//              AND bp.is_active = 1
-//        )
-//        WHERE s.item_id = ?
-//        """;
-//        return jdbcTemplate.update(sql, itemId, itemId);
-//    }
 }

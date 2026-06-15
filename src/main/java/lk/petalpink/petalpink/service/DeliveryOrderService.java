@@ -10,6 +10,11 @@ import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.print.*;
+import javax.print.attribute.DocAttributeSet;
+import javax.print.attribute.HashDocAttributeSet;
+import javax.print.attribute.HashPrintRequestAttributeSet;
+import javax.print.attribute.PrintRequestAttributeSet;
+import javax.print.attribute.standard.JobName;
 import java.util.List;
 
 @Service
@@ -42,7 +47,7 @@ public class DeliveryOrderService {
     public String generateAndAssignTracking(Integer deliveryId) {
         String trackingCode = deliveryOrderRepository.getNextTrackingCodeFromSequence();
         deliveryOrderRepository.assignTrackingCode(deliveryId, trackingCode);
-        printLabel(trackingCode); // ← print immediately after tracking is saved
+//        printLabel(trackingCode); // ← print immediately after tracking is saved
         return trackingCode;
     }
 
@@ -61,16 +66,28 @@ public class DeliveryOrderService {
                 System.out.println("Printer not found: " + printerName);
                 return;
             }
+
             String tspl =
                     "SIZE 50 mm,25 mm\n" +
                             "GAP 2 mm,0\n" +
                             "CLS\n" +
-                            "TEXT 93,10,\"TSS24.BF2\",0,2,2,\"" + "Petal Pink" + "\"\n" +
+                            "TEXT 93,10,\"TSS24.BF2\",0,2,2,\"Petal Pink\"\n" +
                             "BARCODE 85,70,\"128\",80,2,0,2,3,\"" + trackingId + "\"\n" +
                             "PRINT 1\n";
+
+            // Use PrintRequestAttributeSet to suppress dialog
+            PrintRequestAttributeSet attrs = new HashPrintRequestAttributeSet();
+            attrs.add(new JobName("LabelPrint", null));
+
             DocPrintJob job = printer.createPrintJob();
-            Doc doc = new SimpleDoc(tspl.getBytes(), DocFlavor.BYTE_ARRAY.AUTOSENSE, null);
-            job.print(doc, null);
+            DocAttributeSet docAttrs = new HashDocAttributeSet();
+            Doc doc = new SimpleDoc(
+                    tspl.getBytes(),
+                    DocFlavor.BYTE_ARRAY.AUTOSENSE,
+                    docAttrs
+            );
+            job.print(doc, attrs);
+
         } catch (Exception e) {
             e.printStackTrace();
         }

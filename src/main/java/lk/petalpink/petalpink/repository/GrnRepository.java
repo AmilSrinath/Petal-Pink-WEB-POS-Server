@@ -29,7 +29,10 @@ public class GrnRepository {
     }
 
     public List<GrnDTO> findAll() {
-        String sql = "SELECT * FROM pos_inv_grn_tb WHERE status != 0";
+        String sql = "SELECT g.*, s.company_name AS supplier_name " +
+                "FROM pos_inv_grn_tb g " +
+                "LEFT JOIN pos_inv_supplier_tb s ON g.supplier_id = s.supplier_id " +
+                "WHERE g.status != 0";
         return jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(GrnDTO.class));
     }
 

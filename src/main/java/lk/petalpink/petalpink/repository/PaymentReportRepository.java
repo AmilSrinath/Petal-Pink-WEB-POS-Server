@@ -30,7 +30,11 @@ public class PaymentReportRepository {
     }
 
     public int updatePaymentStatusByOrderId(Integer orderId, Integer statusId) {
-        String sql = "UPDATE pos_payment_tb SET status_id = ? WHERE order_id = ?";
-        return jdbcTemplate.update(sql, statusId, orderId);
+        // statusId 8 (Paid)     → payment_status = 1
+        // statusId 9 (Not Paid) → payment_status = 0
+        int paymentStatus = (statusId == 8) ? 1 : (statusId == 9) ? 0 : -1;
+
+        String sql = "UPDATE pos_payment_tb SET status_id = ?, payment_status = ? WHERE order_id = ?";
+        return jdbcTemplate.update(sql, statusId, paymentStatus, orderId);
     }
 }

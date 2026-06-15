@@ -24,6 +24,7 @@ public class DeliveryOrderRepository {
                         "d.delivery_id, d.website_order_id, d.order_code, d.cod_amount, d.weight, " +
                         "d.remark, d.order_type, d.status, d.status_id, d.is_free_delivery, " +
                         "d.is_return, d.is_exchange, d.user_id, d.created_date, d.delivered_date, " +
+                        "d.courier_bag_id, d.courier_bag_name, " +   // ← add this line
                         "c.customer_id, c.customer_name, c.customer_number, c.phone_one, c.phone_two, c.address, " +
                         "o.order_id, o.bill_no, o.sub_total_price, o.total_discount_price, " +
                         "o.delivery_fee, o.total_order_price, o.paid_amount, o.payment_type_id " +
@@ -53,6 +54,9 @@ public class DeliveryOrderRepository {
                 dto.setUserId(rs.getObject("user_id") != null ? rs.getInt("user_id") : null);
                 dto.setCreatedDate(rs.getTimestamp("created_date"));
                 dto.setDeliveredDate(rs.getTimestamp("delivered_date"));
+
+                dto.setCourierBagId(rs.getObject("courier_bag_id") != null ? rs.getInt("courier_bag_id") : null);
+                dto.setCourierBagName(rs.getString("courier_bag_name"));
 
                 // customer
                 dto.setCustomerId(rs.getObject("customer_id") != null ? rs.getInt("customer_id") : null);

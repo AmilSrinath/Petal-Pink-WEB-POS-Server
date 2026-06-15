@@ -44,4 +44,8 @@ public class DeliveryOrderDTO {
     private Double totalOrderPrice;
     private Double paidAmount;
     private Integer paymentTypeId;
+
+    // courier bag
+    private Integer courierBagId;
+    private String  courierBagName;
 }

@@ -16,6 +16,9 @@ public class OrderStockService {
     private static final int STOCK_LOCATION_MAIN = 1;
 
     @Autowired
+    private ItemRepository itemRepository;
+
+    @Autowired
     private ItemTemplateRepository itemTemplateRepository;
 
     @Autowired
@@ -27,50 +30,45 @@ public class OrderStockService {
     @Autowired
     private StockDetailsRepository stockDetailsRepository;
 
-    // ─── 1. CHECK STOCK BEFORE ADDING TO CART ────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
+    //  1. CHECK STOCK BEFORE ADDING TO CART
+    //     Checks the ordered item itself (not ingredients — production handles that)
+    // ─────────────────────────────────────────────────────────────────────────
 
     public StockCheckResultDTO checkStockForItem(Integer itemId, Double orderQuantity) {
+
+        if (isBudgetPack(itemId)) {
+            return checkBudgetPackStock(itemId, orderQuantity);
+        }
+
         StockCheckResultDTO result = new StockCheckResultDTO();
         List<IngredientStockStatusDTO> statuses = new ArrayList<>();
 
-        ItemTemplateDTO template = itemTemplateRepository.getTemplateByItemId(itemId);
+        StockDTO stock = stockRepository.findByItemId(itemId);
 
-        if (template == null || template.getIngredients() == null || template.getIngredients().isEmpty()) {
-            result.setAvailable(true);
-            result.setMessage("No ingredient template found — stock check skipped");
-            result.setIngredientStatuses(statuses);
-            return result;
-        }
+        double available =
+                (stock != null && stock.getQty() != null)
+                        ? stock.getQty()
+                        : 0.0;
 
-        boolean allSufficient = true;
+        boolean sufficient = available >= orderQuantity;
 
-        for (IngredientDTO ingredient : template.getIngredients()) {
-            double requiredQty = ingredient.getQuantity() * orderQuantity;
+        IngredientStockStatusDTO status = new IngredientStockStatusDTO();
+        status.setSubItemId(itemId);
+        status.setSubItemName(stock != null ? stock.getItemName() : "Item " + itemId);
+        status.setRequiredQty(orderQuantity);
+        status.setAvailableQty(available);
+        status.setSufficient(sufficient);
 
-            List<BatchProfileDTO> batches = batchProfileRepository
-                    .findActiveBatchesFIFO(ingredient.getSubItemId());
+        statuses.add(status);
 
-            double availableQty = batches.stream()
-                    .mapToDouble(b -> b.getPlusQty() != null ? b.getPlusQty() : 0.0)
-                    .sum();
-
-            boolean sufficient = availableQty >= requiredQty;
-            if (!sufficient) allSufficient = false;
-
-            IngredientStockStatusDTO status = new IngredientStockStatusDTO();
-            status.setSubItemId(ingredient.getSubItemId());
-            status.setSubItemName(ingredient.getSubItemName());
-            status.setRequiredQty(requiredQty);
-            status.setAvailableQty(availableQty);
-            status.setSufficient(sufficient);
-            statuses.add(status);
-        }
-
-        result.setAvailable(allSufficient);
+        result.setAvailable(sufficient);
         result.setIngredientStatuses(statuses);
-        result.setMessage(allSufficient
-                ? "Stock available"
-                : "Insufficient stock for one or more ingredients");
+        result.setMessage(
+                sufficient
+                        ? "Stock available"
+                        : "Insufficient stock for item"
+        );
 
         return result;
     }
@@ -83,158 +81,229 @@ public class OrderStockService {
         return results;
     }
 
-    // ─── 2. DEDUCT STOCK ON PLACE ORDER (FIFO) ───────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
+    //  2. DEDUCT THE ORDERED ITEM ITSELF FROM STOCK (FIFO)
+    //
+    //  Production has already reduced raw ingredients when the product was made.
+    //  On sale we only need to reduce the finished item's stock and record
+    //  one or more stock_details rows (one per batch slice consumed).
+    // ─────────────────────────────────────────────────────────────────────────
 
     @Transactional
-    public void deductStockForOrder(Integer itemId, Double orderQuantity,
-                                    Integer orderId, Integer userId) {
+    public void deductItemStockForOrder(Integer itemId, String itemName,
+                                        double orderQuantity, Integer userId) {
 
-        ItemTemplateDTO template = itemTemplateRepository.getTemplateByItemId(itemId);
+        // ── Resolve master stock ──────────────────────────────────────────────
+        StockDTO master = stockRepository.findByItemId(itemId);
 
-        if (template == null || template.getIngredients() == null
-                || template.getIngredients().isEmpty()) {
-            return;
+        if (master == null) {
+            throw new IllegalStateException(
+                    "Item not found in stock: itemId=" + itemId);
         }
 
-        for (IngredientDTO ingredient : template.getIngredients()) {
-            double totalRequired = ingredient.getQuantity() * orderQuantity;
+        double available = master.getQty() != null ? master.getQty() : 0.0;
+        if (available < orderQuantity) {
+            throw new IllegalStateException(
+                    "Insufficient stock for item '" + master.getItemName() +
+                            "' | Required: " + orderQuantity + " | Available: " + available);
+        }
 
-            // ✅ Fetch master stock once per ingredient to reuse stockId
-            StockDTO master = stockRepository.findByItemId(ingredient.getSubItemId());
-            Integer stockId = (master != null) ? master.getStockId() : null;
+        String resolvedName = (itemName != null && !itemName.isBlank())
+                ? itemName : master.getItemName();
 
-            List<BatchProfileDTO> batches = batchProfileRepository
-                    .findActiveBatchesFIFO(ingredient.getSubItemId());
+        // ── FIFO: fetch active batches for this item, oldest first ────────────
+        List<FifoBatchDTO> fifoBatches =
+                stockDetailsRepository.findFifoBatchesForStock(master.getStockId());
 
-            if (batches == null || batches.isEmpty()) {
-                // ── FALLBACK: No batch profile — use master stock directly ──
-                deductFromMasterDirectly(ingredient, totalRequired, stockId, userId);
-                continue;
-            }
+        double remaining = orderQuantity;
 
-            // ── FIFO batch deduction ──
-            double remaining = totalRequired;
-
-            for (BatchProfileDTO batch : batches) {
+        if (fifoBatches != null && !fifoBatches.isEmpty()) {
+            // Walk batches oldest → newest, consume what we need
+            for (FifoBatchDTO batch : fifoBatches) {
                 if (remaining <= 0) break;
 
-                double batchAvailable = batch.getPlusQty() != null ? batch.getPlusQty() : 0.0;
-                if (batchAvailable <= 0) continue;
+                double consume = Math.min(batch.getAvailableQty(), remaining);
+                remaining -= consume;
 
-                double consumeFromBatch = Math.min(batchAvailable, remaining);
-
-                // ✅ stockId added as first argument
                 stockDetailsRepository.insertSaleDetail(
-                        stockId,
-                        batch.getRegId(),
+                        master.getStockId(),
+                        batch.getBatchRegId(),
                         STOCK_ADJ_TYPE_SALE,
-                        ingredient.getSubItemName(),
+                        resolvedName,
                         batch.getCostPrice(),
-                        batch.getCostPrice(),
-                        consumeFromBatch,
-                        batch.getUnitType(),
+                        batch.getLastGrnPrice(),
+                        consume,
+                        master.getUnitType(),
                         userId
                 );
 
-                stockRepository.updateMasterQty(ingredient.getSubItemId(), -consumeFromBatch);
-                remaining -= consumeFromBatch;
-            }
-
-            // After walking all batches, check if fully covered
-            if (remaining > 0.0001) {
-                double masterQty = (master != null && master.getQty() != null) ? master.getQty() : 0.0;
-
-                if (masterQty < remaining) {
-                    throw new IllegalStateException(
-                            "Insufficient stock for ingredient: " + ingredient.getSubItemName()
-                                    + " | Still needed: " + remaining
-                                    + " | Master stock available: " + masterQty
-                    );
-                }
-
-                // ✅ stockId added, batch_reg_id = null (no batch covers this remainder)
-                stockDetailsRepository.insertSaleDetail(
-                        stockId,
-                        null,
-                        STOCK_ADJ_TYPE_SALE,
-                        ingredient.getSubItemName(),
-                        null,
-                        null,
-                        remaining,
-                        null,
-                        userId
-                );
-
-                stockRepository.updateMasterQty(ingredient.getSubItemId(), -remaining);
+                stockRepository.updateMasterQty(itemId, -consume);
             }
         }
-    }
 
-    // ── Helper: no batch profile exists — deduct straight from master ─────────
-    private void deductFromMasterDirectly(IngredientDTO ingredient,
-                                          double totalRequired,
-                                          Integer stockId,       // ✅ NEW parameter
-                                          Integer userId) {
-        StockDTO master = stockRepository.findByItemId(ingredient.getSubItemId());
-        double available = (master != null && master.getQty() != null) ? master.getQty() : 0.0;
-
-        if (available < totalRequired) {
-            throw new IllegalStateException(
-                    "Insufficient stock for ingredient: " + ingredient.getSubItemName()
-                            + " | Required: " + totalRequired
-                            + " | Available: " + available
+        // ── Remainder not covered by any batch (no batch_reg_id) ─────────────
+        if (remaining > 0.0001) {
+            stockDetailsRepository.insertSaleDetail(
+                    master.getStockId(),
+                    null,               // no batch available for this slice
+                    STOCK_ADJ_TYPE_SALE,
+                    resolvedName,
+                    null,
+                    null,
+                    remaining,
+                    master.getUnitType(),
+                    userId
             );
+            stockRepository.updateMasterQty(itemId, -remaining);
         }
-
-        // ✅ stockId added as first argument
-        stockDetailsRepository.insertSaleDetail(
-                stockId,
-                null,
-                STOCK_ADJ_TYPE_SALE,
-                ingredient.getSubItemName(),
-                null,
-                null,
-                totalRequired,
-                null,
-                userId
-        );
-
-        stockRepository.updateMasterQty(ingredient.getSubItemId(), -totalRequired);
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  3. DEDUCT COURIER BAG (unchanged)
+    // ─────────────────────────────────────────────────────────────────────────
 
     @Transactional
     public void deductCourierBag(Integer courierBagId, String courierBagName, Integer userId) {
         if (courierBagId == null) return;
 
         StockDTO master = stockRepository.findByItemId(courierBagId);
-
         if (master == null) {
             throw new IllegalStateException("Courier bag not found in stock: " + courierBagName);
         }
 
         double available = master.getQty() != null ? master.getQty() : 0.0;
-
         if (available < 1.0) {
             throw new IllegalStateException(
-                    "Insufficient courier bag stock: " + courierBagName
-                            + " | Available: " + available
-            );
+                    "Insufficient courier bag stock: " + courierBagName +
+                            " | Available: " + available);
         }
 
-        // Insert stock detail (minus 1 bag)
         stockDetailsRepository.insertSaleDetail(
-                master.getStockId(),   // stockId
-                null,                  // batchRegId (no batch for courier bags)
+                master.getStockId(),
+                null,
                 STOCK_ADJ_TYPE_SALE,
                 courierBagName != null ? courierBagName : "Courier Bag",
-                null,                  // costPrice
-                null,                  // lastGrnPrice
-                1.0,                   // minusQty — always 1 per order
-                master.getUnitType(),  // stockUnitType
+                null,
+                null,
+                1.0,
+                master.getUnitType(),
                 userId
         );
 
-        // Deduct 1 from master stock
         stockRepository.updateMasterQty(courierBagId, -1.0);
+    }
+
+    public boolean isBudgetPack(Integer itemId) {
+
+        String item = itemRepository.findItemNameById(itemId);
+
+        if (item == null) {
+            return false;
+        }
+
+        return item
+                .trim()
+                .toLowerCase()
+                .startsWith("budget pack");
+    }
+
+    public StockCheckResultDTO checkBudgetPackStock(
+            Integer budgetPackId,
+            Double orderQty) {
+
+        ItemTemplateDTO template =
+                itemTemplateRepository.getTemplateByItemId(budgetPackId);
+
+        if (template == null) {
+            throw new IllegalStateException(
+                    "Budget pack template not found : " + budgetPackId);
+        }
+
+        List<IngredientStockStatusDTO> statuses = new ArrayList<>();
+
+        boolean allAvailable = true;
+
+        for (IngredientDTO ingredient : template.getIngredients()) {
+
+            double requiredQty =
+                    ingredient.getQuantity() * orderQty;
+
+            StockDTO stock =
+                    stockRepository.findByItemId(
+                            ingredient.getSubItemId());
+
+            double availableQty =
+                    stock != null && stock.getQty() != null
+                            ? stock.getQty()
+                            : 0.0;
+
+            boolean sufficient =
+                    availableQty >= requiredQty;
+
+            if (!sufficient) {
+                allAvailable = false;
+            }
+
+            IngredientStockStatusDTO status =
+                    new IngredientStockStatusDTO();
+
+            status.setSubItemId(
+                    ingredient.getSubItemId());
+
+            status.setSubItemName(
+                    ingredient.getSubItemName());
+
+            status.setRequiredQty(requiredQty);
+
+            status.setAvailableQty(availableQty);
+
+            status.setSufficient(sufficient);
+
+            statuses.add(status);
+        }
+
+        StockCheckResultDTO result =
+                new StockCheckResultDTO();
+
+        result.setAvailable(allAvailable);
+        result.setIngredientStatuses(statuses);
+
+        result.setMessage(
+                allAvailable
+                        ? "Budget pack stock available"
+                        : "Insufficient stock in budget pack");
+
+        return result;
+    }
+
+    @Transactional
+    public void deductBudgetPackStock(
+            Integer budgetPackId,
+            Double orderQty,
+            Integer userId) {
+
+        ItemTemplateDTO template =
+                itemTemplateRepository.getTemplateByItemId(
+                        budgetPackId);
+
+        if (template == null) {
+            throw new IllegalStateException(
+                    "Budget pack template not found : "
+                            + budgetPackId);
+        }
+
+        for (IngredientDTO ingredient :
+                template.getIngredients()) {
+
+            double qtyToDeduct =
+                    ingredient.getQuantity() * orderQty;
+
+            deductItemStockForOrder(
+                    ingredient.getSubItemId(),
+                    ingredient.getSubItemName(),
+                    qtyToDeduct,
+                    userId
+            );
+        }
     }
 }
