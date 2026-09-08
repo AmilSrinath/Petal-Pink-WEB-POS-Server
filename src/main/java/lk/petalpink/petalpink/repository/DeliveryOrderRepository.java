@@ -24,7 +24,7 @@ public class DeliveryOrderRepository {
                         "d.delivery_id, d.website_order_id, d.order_code, d.cod_amount, d.weight, " +
                         "d.remark, d.order_type, d.status, d.status_id, d.is_free_delivery, " +
                         "d.is_return, d.is_exchange, d.user_id, d.created_date, d.delivered_date, " +
-                        "d.courier_bag_id, d.courier_bag_name, " +   // ← add this line
+                        "d.courier_bag_id, d.courier_bag_name, d.courier_bag_deducted, " +   // ← add this line
                         "c.customer_id, c.customer_name, c.customer_number, c.phone_one, c.phone_two, c.address, " +
                         "o.order_id, o.bill_no, o.sub_total_price, o.total_discount_price, " +
                         "o.delivery_fee, o.total_order_price, o.paid_amount, o.payment_type_id " +
@@ -57,6 +57,7 @@ public class DeliveryOrderRepository {
 
                 dto.setCourierBagId(rs.getObject("courier_bag_id") != null ? rs.getInt("courier_bag_id") : null);
                 dto.setCourierBagName(rs.getString("courier_bag_name"));
+                dto.setCourierBagDeducted(rs.getObject("courier_bag_deducted") != null ? rs.getInt("courier_bag_deducted") : 0);
 
                 // customer
                 dto.setCustomerId(rs.getObject("customer_id") != null ? rs.getInt("customer_id") : null);
@@ -131,6 +132,35 @@ public class DeliveryOrderRepository {
         );
     }
 
+    /**
+     * Lightweight lookup used only to decide whether/what courier bag stock
+     * needs to be deducted when an order moves to Despatch.
+     */
+    public DeliveryOrderDTO getCourierBagInfo(Integer deliveryId) {
+        String sql =
+                "SELECT courier_bag_id, courier_bag_name, courier_bag_deducted, user_id " +
+                        "FROM pos_main_delivery_order_tb WHERE delivery_id = ?";
+
+        List<DeliveryOrderDTO> result = jdbcTemplate.query(sql, (rs, rowNum) -> {
+            DeliveryOrderDTO dto = new DeliveryOrderDTO();
+            dto.setCourierBagId(rs.getObject("courier_bag_id") != null ? rs.getInt("courier_bag_id") : null);
+            dto.setCourierBagName(rs.getString("courier_bag_name"));
+            dto.setCourierBagDeducted(rs.getObject("courier_bag_deducted") != null ? rs.getInt("courier_bag_deducted") : 0);
+            dto.setUserId(rs.getObject("user_id") != null ? rs.getInt("user_id") : null);
+            return dto;
+        }, deliveryId);
+
+        return result.isEmpty() ? null : result.get(0);
+    }
+
+    /** Marks the courier bag stock as already deducted for this order, so it is never deducted twice. */
+    public void markCourierBagDeducted(Integer deliveryId) {
+        jdbcTemplate.update(
+                "UPDATE pos_main_delivery_order_tb SET courier_bag_deducted = 1 WHERE delivery_id = ?",
+                deliveryId
+        );
+    }
+
     public String getRemarkByDeliveryId(Integer deliveryId) {
         String sql = "SELECT remark FROM pos_main_delivery_order_tb WHERE delivery_id = ?";
         return jdbcTemplate.queryForObject(sql, String.class, deliveryId);
@@ -152,14 +182,30 @@ public class DeliveryOrderRepository {
         return String.format("NPP%07d", next);
     }
 
-    public void assignTrackingCode(Integer deliveryId, String trackingCode) {
+    public void assignTrackingCode(Integer deliveryId, String trackingCode, Integer courierBagId, String courierBagName) {
         jdbcTemplate.update(
-                "UPDATE pos_main_delivery_order_tb SET order_code = ?, status_id = 3 WHERE delivery_id = ?",
-                trackingCode, deliveryId
+                "UPDATE pos_main_delivery_order_tb " +
+                        "SET order_code = ?, status_id = 3, courier_bag_id = ?, courier_bag_name = ? " +
+                        "WHERE delivery_id = ?",
+                trackingCode, courierBagId, courierBagName, deliveryId
         );
         jdbcTemplate.update(
                 "UPDATE pos_main_order_tb SET bill_no = ? WHERE delivery_order_id = ?",
                 trackingCode, deliveryId
+        );
+    }
+
+    /**
+     * Moves an order into Wrapping (status_id = 3) and records the courier bag
+     * chosen for it at that moment, without touching the existing order_code.
+     * Used when tracking codes are entered manually rather than auto-generated.
+     */
+    public void setWrappingCourierBag(Integer deliveryId, Integer courierBagId, String courierBagName) {
+        jdbcTemplate.update(
+                "UPDATE pos_main_delivery_order_tb " +
+                        "SET status_id = 3, courier_bag_id = ?, courier_bag_name = ? " +
+                        "WHERE delivery_id = ?",
+                courierBagId, courierBagName, deliveryId
         );
     }
 

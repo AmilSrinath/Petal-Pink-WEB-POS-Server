@@ -37,7 +37,7 @@ public class CourierBranchRepository {
         String sql = """
             SELECT b.*, c.company_name AS company
             FROM pos_courier_branch_tb b
-            JOIN pos_company_tb c ON b.company_id = c.company_id
+            JOIN pos_courier_company_tb c ON b.company_id = c.company_id
             WHERE b.company_id = ? AND b.status != 0
         """;
         return jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(CourierBranchDTO.class), companyId);

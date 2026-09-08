@@ -6,6 +6,7 @@ import lk.petalpink.petalpink.dto.UpdateOrderRequestDTO;
 import lk.petalpink.petalpink.repository.CreateOrderRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -17,7 +18,12 @@ public class CreateOrderService {
     @Autowired
     private OrderStockService orderStockService;
 
-    @Transactional
+    // REQUIRES_NEW: this always runs as its own, independent transaction.
+    // This matters because WebOrderService calls this method after already
+    // saving a Website Order; if this order-creation step fails (e.g. stock
+    // issue) it must roll back on its own without ever rolling back the
+    // Website Order save that already happened.
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Integer createOrder(CreateOrderRequestDTO req) {
 
         // step 1 - upsert customer
@@ -36,6 +42,14 @@ public class CreateOrderService {
         //          (ingredient breakdown is handled separately in ProductionService)
         if (req.getItems() != null) {
             for (OrderDetailItemDTO item : req.getItems()) {
+                if (item.getItemId() == null) {
+                    // No matching POS item found for this line (e.g. a website
+                    // product not yet linked to a POS item by name). The line
+                    // is still recorded on the order/bill; it's just skipped
+                    // for FIFO stock deduction.
+                    continue;
+                }
+
                 double qty =
                         item.getQuantity() != null
                                 ? item.getQuantity().doubleValue()
@@ -58,12 +72,11 @@ public class CreateOrderService {
             }
         }
 
-        // step 5b - deduct 1 courier bag per order
-        orderStockService.deductCourierBag(
-                req.getCourierBagId(),
-                req.getCourierBagName(),
-                req.getUserId()
-        );
+        // NOTE: Courier bag stock is intentionally NOT deducted here anymore.
+        // It is deducted later, once, when the order's delivery status is
+        // changed to "Despatch" (status_id = 4) — see DeliveryOrderService.
+        // This avoids charging a bag against stock for orders that never
+        // actually ship (e.g. get Cancelled while still Pending/Wrapping).
 
         // step 6 - create payment record (status_id = 9, Not Paid)
         createOrderRepository.createPayment(orderId, customerId, req);

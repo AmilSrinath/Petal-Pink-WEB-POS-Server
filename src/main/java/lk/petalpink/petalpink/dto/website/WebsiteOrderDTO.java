@@ -16,6 +16,10 @@ public class WebsiteOrderDTO {
     private Double    subTotal;
     private String    orderStatus;
     private String    trackingNumber;
+    // Sales page linkage — set once this order has been pushed into the Sales
+    // page as a normal order (pos_main_delivery_order_tb.delivery_id). Null
+    // means it hasn't been synced yet (or the sync failed).
+    private Integer   deliveryOrderId;
     // Customer fields (populated for getOrderDetails)
     private Integer   cusId;
     private String    firstName;

@@ -20,8 +20,14 @@ import java.util.List;
 @Service
 public class DeliveryOrderService {
 
+    // pos_status_types.status_id for "Despatch" (see reg_id = 1 status group)
+    private static final int STATUS_ID_DESPATCH = 4;
+
     @Autowired
     private DeliveryOrderRepository deliveryOrderRepository;
+
+    @Autowired
+    private OrderStockService orderStockService;
 
     public List<DeliveryOrderDTO> getByDateRange(String startDate, String endDate) {
         return deliveryOrderRepository.getByDateRange(startDate, endDate);
@@ -31,8 +37,35 @@ public class DeliveryOrderService {
         return deliveryOrderRepository.getOrderItemsByDeliveryId(deliveryId);
     }
 
-    public void updateDeliveryStatus(Integer deliveryId, Integer statusId) {
+    /**
+     * Updates the delivery status. If the new status is "Despatch", the order's
+     * courier bag is deducted from stock at this point (once only — guarded by
+     * courier_bag_deducted). It is intentionally never added back to stock when
+     * an order later moves to Cancel/Return, per business rule.
+     */
+    @Transactional
+    public void updateDeliveryStatus(Integer deliveryId, Integer statusId, Integer userId) {
         deliveryOrderRepository.updateDeliveryStatus(deliveryId, statusId);
+
+        if (statusId != null && statusId == STATUS_ID_DESPATCH) {
+            deductCourierBagIfNeeded(deliveryId, userId);
+        }
+    }
+
+    private void deductCourierBagIfNeeded(Integer deliveryId, Integer userId) {
+        DeliveryOrderDTO info = deliveryOrderRepository.getCourierBagInfo(deliveryId);
+
+        if (info == null || info.getCourierBagId() == null) {
+            return; // no bag selected for this order — nothing to deduct
+        }
+        if (info.getCourierBagDeducted() != null && info.getCourierBagDeducted() == 1) {
+            return; // already deducted (e.g. order was moved to Despatch before) — never deduct twice
+        }
+
+        Integer effectiveUserId = (userId != null) ? userId : info.getUserId();
+
+        orderStockService.deductCourierBag(info.getCourierBagId(), info.getCourierBagName(), effectiveUserId);
+        deliveryOrderRepository.markCourierBagDeducted(deliveryId);
     }
 
     public String getRemarkByDeliveryId(Integer deliveryId) {
@@ -44,11 +77,22 @@ public class DeliveryOrderService {
     }
 
     @Transactional(isolation = Isolation.SERIALIZABLE)
-    public String generateAndAssignTracking(Integer deliveryId) {
+    public String generateAndAssignTracking(Integer deliveryId, Integer courierBagId, String courierBagName) {
         String trackingCode = deliveryOrderRepository.getNextTrackingCodeFromSequence();
-        deliveryOrderRepository.assignTrackingCode(deliveryId, trackingCode);
+        deliveryOrderRepository.assignTrackingCode(deliveryId, trackingCode, courierBagId, courierBagName);
 //        printLabel(trackingCode); // ← print immediately after tracking is saved
         return trackingCode;
+    }
+
+    /**
+     * Moves a pending order to Wrapping and records the courier bag selected
+     * for it. This is the point at which a courier bag should be chosen —
+     * not at order creation — since only now is the order actually being
+     * packed for a specific courier.
+     */
+    @Transactional
+    public void moveToWrapping(Integer deliveryId, Integer courierBagId, String courierBagName) {
+        deliveryOrderRepository.setWrappingCourierBag(deliveryId, courierBagId, courierBagName);
     }
 
     private void printLabel(String trackingId) {

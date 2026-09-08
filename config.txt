@@ -1,8 +1,8 @@
-server_ip=localhost
+server_ip=10.10.10.1
 server_port=3306
-db.name=petal_pink_pos_new_20260421
-db.username=root
-db.password=12345678
+db.name=petal_pink_pos
+db.username=myuser
+db.password=D,8T1,GXeN*x_2V_3/y|
 
 # Delivery Fee
 delivery.fee=390
@@ -23,3 +23,7 @@ auto_generate_id = 1
 #courier bags
 is_show_courier_bags = 1
 courier_bags_subcategory = 4
+
+gcp.credentials-path=utils/petal-pink-cfa7e6fb0d5b.json
+gcp.bucket-name=petal-pink
+gcp.project-id=petal-pink-official-website

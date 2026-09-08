@@ -48,4 +48,5 @@ public class DeliveryOrderDTO {
     // courier bag
     private Integer courierBagId;
     private String  courierBagName;
+    private Integer courierBagDeducted; // 0/1 — 1 once stock has been taken for this order's bag
 }

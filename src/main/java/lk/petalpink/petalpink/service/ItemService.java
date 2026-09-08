@@ -60,6 +60,10 @@ public class ItemService {
         return itemRepository.findAll();
     }
 
+    public List<ItemDTO> getAllItems(boolean includeInactive) {
+        return includeInactive ? itemRepository.findAllIncludingInactive() : itemRepository.findAll();
+    }
+
     public String deleteItem(int itemId) {
         int rows = itemRepository.softDelete(itemId);
         return rows > 0 ? "Item deleted successfully" : "Item not found";

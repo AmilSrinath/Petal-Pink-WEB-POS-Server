@@ -39,9 +39,16 @@ public class DeliveryOrderController {
     @PatchMapping("/{deliveryId}/status")
     public ResponseEntity<String> updateDeliveryStatus(
             @PathVariable Integer deliveryId,
-            @RequestParam Integer statusId) {
-        deliveryOrderService.updateDeliveryStatus(deliveryId, statusId);
-        return ResponseEntity.ok("Status updated successfully");
+            @RequestParam Integer statusId,
+            @RequestParam(required = false) Integer userId) {
+        try {
+            deliveryOrderService.updateDeliveryStatus(deliveryId, statusId, userId);
+            return ResponseEntity.ok("Status updated successfully");
+        } catch (IllegalStateException e) {
+            // e.g. courier bag out of stock — status change is rejected so the
+            // order doesn't move to Despatch without a bag actually deducted
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
     @GetMapping("/{deliveryId}/remark")
@@ -64,12 +71,31 @@ public class DeliveryOrderController {
     }
 
     @PostMapping("/{deliveryId}/generate-tracking")
-    public ResponseEntity<String> generateTracking(@PathVariable Integer deliveryId) {
+    public ResponseEntity<String> generateTracking(
+            @PathVariable Integer deliveryId,
+            @RequestParam(required = false) Integer courierBagId,
+            @RequestParam(required = false) String courierBagName) {
         try {
-            String trackingCode = deliveryOrderService.generateAndAssignTracking(deliveryId);
+            String trackingCode = deliveryOrderService.generateAndAssignTracking(deliveryId, courierBagId, courierBagName);
             return ResponseEntity.ok(trackingCode);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Failed to generate tracking: " + e.getMessage());
+        }
+    }
+
+    // Moves a pending order to Wrapping (status_id = 3) and records the
+    // courier bag chosen for it. Used when the tracking/order code is
+    // entered manually instead of auto-generated (see generate-tracking).
+    @PatchMapping("/{deliveryId}/wrapping")
+    public ResponseEntity<String> moveToWrapping(
+            @PathVariable Integer deliveryId,
+            @RequestParam(required = false) Integer courierBagId,
+            @RequestParam(required = false) String courierBagName) {
+        try {
+            deliveryOrderService.moveToWrapping(deliveryId, courierBagId, courierBagName);
+            return ResponseEntity.ok("Order moved to Wrapping");
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Failed to update order: " + e.getMessage());
         }
     }
 

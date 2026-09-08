@@ -123,7 +123,7 @@ public class InquiryRepository {
                 "INSERT INTO pos_inquiry_tb " +
                         "(way_bill, customer_id, customer_name, customer_phone_1, customer_phone_2, " +
                         "company, branch, branch_contact, reson, remark, status, created_date, user_id, status_id) " +
-                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), ?, ?)";
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), ?, 11)";
 
         return jdbcTemplate.update(sql,
                 dto.getWayBill(),
@@ -137,8 +137,7 @@ public class InquiryRepository {
                 dto.getReason(),
                 dto.getRemark(),
                 dto.getStatus(),
-                dto.getUserId(),
-                dto.getStatusId()
+                dto.getUserId()
         );
     }
 }

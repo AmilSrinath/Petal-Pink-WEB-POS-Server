@@ -5,6 +5,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
+
 @Data @AllArgsConstructor @NoArgsConstructor
 public class WebsiteProductSaveRequestDTO {
     private String    productName;
@@ -20,7 +22,16 @@ public class WebsiteProductSaveRequestDTO {
     private String    howToUse;
     private String    userId;
     private String    businessName;
-    private MultipartFile imageUrl;
-    private MultipartFile imageUrl2;
-    private MultipartFile imageUrl3;
+    private String    imageUrl;
+    private String    imageUrl2;
+    private String    imageUrl3;
+
+    private Integer mainCategoryId;
+    private Integer subCategoryId;
+
+    // Clothing-only variants: sent only when mainCategoryId is the Clothing category.
+    // Each entry is one size together with the EXACT colors it comes in for this
+    // product (a size can have many colors and a color can belong to many sizes,
+    // but each pairing is explicit here — no cross-joining across unrelated sizes).
+    private List<ProductSizeGroupRequestDTO> sizeGroups;
 }

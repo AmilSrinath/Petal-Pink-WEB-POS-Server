@@ -7,7 +7,7 @@ import java.sql.Timestamp;
 
 @Data @AllArgsConstructor @NoArgsConstructor
 public class WebsiteBannerDTO {
-    private Integer   id;
+    private Integer   bannerId;
     private String    title;
     private String    subtitle;
     private String    imageUrl;

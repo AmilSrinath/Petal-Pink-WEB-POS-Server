@@ -80,6 +80,34 @@ public class ItemRepository {
         return jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(ItemDTO.class));
     }
 
+    // Same as findAll() but does not exclude inactive (status = 0) items.
+    // Used by the Item List management page so inactive items remain visible
+    // (and can be re-activated), while every other consumer of /api/items
+    // keeps getting only active items via findAll().
+    public List<ItemDTO> findAllIncludingInactive() {
+        String sql = """
+        SELECT i.*,
+               mc.main_item_category_name,
+               sc.sub_item_category_name,
+               bp_main.bussiness_profile_name,
+               (
+                   SELECT sd.last_grn_price
+                   FROM pos_inv_stock_tb st
+                   JOIN pos_inv_stock_details_tb sd ON sd.stock_id = st.stock_id
+                   WHERE st.item_id = i.item_id
+                     AND sd.last_grn_price IS NOT NULL
+                   ORDER BY sd.stock_details_id DESC
+                   LIMIT 1
+               ) AS last_grn_price
+        FROM pos_main_item_tb i
+        LEFT JOIN pos_main_item_category_tb mc ON i.main_item_category_id = mc.main_item_category_id
+        LEFT JOIN pos_sub_item_category_tb sc ON i.sub_item_category_id = sc.sub_item_category_id
+        LEFT JOIN pos_main_bussiness_profile bp_main ON i.bussiness_profile = bp_main.bussiness_profile_id
+        ORDER BY i.item_id ASC
+        """;
+        return jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(ItemDTO.class));
+    }
+
     public int update(ItemDTO dto) {
         String sql = "UPDATE pos_main_item_tb SET " +
                 "item_bar_code=?, " +
@@ -167,5 +195,11 @@ public class ItemRepository {
           AND i.sub_item_category_id = ?
         """;
         return jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(ItemDTO.class), subCategoryId);
+    }
+
+    public Integer findItemIdByName(String itemName) {
+        String sql = "SELECT item_id FROM pos_main_item_tb WHERE item_name = ? AND status != 0 LIMIT 1";
+        List<Integer> result = jdbcTemplate.queryForList(sql, Integer.class, itemName);
+        return result.isEmpty() ? null : result.get(0);
     }
 }

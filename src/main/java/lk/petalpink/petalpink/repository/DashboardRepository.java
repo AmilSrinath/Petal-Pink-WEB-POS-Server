@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -93,7 +94,21 @@ public class DashboardRepository {
     }
 
     /**
-     * Returns the item-wise sale count for today.
+     * Returns the item-wise sale count for today only.
+     * Thin wrapper around {@link #getItemSaleCountsForRange(String, String)} so
+     * existing callers (e.g. getSummary()) keep working unchanged.
+     */
+    public List<ItemSaleCountDTO> getTodayItemSaleCounts() {
+        String today = LocalDate.now().toString();
+        return getItemSaleCountsForRange(today, today);
+    }
+
+    /**
+     * Returns item-wise sale counts for any inclusive date range
+     * [startDate, endDate], both formatted as "yyyy-MM-dd".
+     *
+     * Used for the dashboard's period selector:
+     * Today, Yesterday, Day Before Yesterday, Last 7/14/28 Days, Last 3 Months.
      *
      * Joins:
      *   pos_main_delivery_order_tb  (delivery date filter + status filter)
@@ -104,7 +119,7 @@ public class DashboardRepository {
      * Excludes orders with status_id IN (6=Return, 7=Cancel, 15=Cancel).
      * Groups by item and orders by totalQuantitySold DESC.
      */
-    public List<ItemSaleCountDTO> getTodayItemSaleCounts() {
+    public List<ItemSaleCountDTO> getItemSaleCountsForRange(String startDate, String endDate) {
         String sql = """
                 SELECT
                     i.item_id                        AS itemId,
@@ -118,7 +133,7 @@ public class DashboardRepository {
                      ON od.order_id = o.order_id
                 JOIN pos_main_item_tb i
                      ON i.item_id = od.item_id
-                WHERE DATE(d.created_date) = CURDATE()
+                WHERE DATE(d.created_date) BETWEEN ? AND ?
                   AND d.status_id NOT IN (6, 7, 15)
                 GROUP BY i.item_id, i.item_name
                 ORDER BY totalQuantitySold DESC
@@ -131,6 +146,6 @@ public class DashboardRepository {
             dto.setTotalQuantitySold(rs.getLong("totalQuantitySold"));
             dto.setTotalItemRevenue(rs.getDouble("totalItemRevenue"));
             return dto;
-        });
+        }, startDate, endDate);
     }
 }

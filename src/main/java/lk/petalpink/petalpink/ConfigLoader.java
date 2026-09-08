@@ -26,6 +26,13 @@ public class ConfigLoader implements ApplicationContextInitializer<ConfigurableA
         Properties props = new Properties();
         try (InputStream is = Files.newInputStream(configPath)) {
             props.load(is);
+
+            props.load(is);
+
+            System.out.println("[DEBUG] max-file-size = " + props.getProperty("spring.servlet.multipart.max-file-size"));
+            System.out.println("[DEBUG] max-request-size = " + props.getProperty("spring.servlet.multipart.max-request-size"));
+
+
             MutablePropertySources sources = environment.getPropertySources();
             sources.addFirst(new PropertiesPropertySource("config.txt", props));
             System.out.println("[ConfigLoader] Loaded config.txt from: "

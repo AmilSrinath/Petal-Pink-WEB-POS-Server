@@ -56,4 +56,21 @@ public class DashboardController {
         List<ItemSaleCountDTO> items = dashboardService.getTodayItemSaleCounts();
         return ResponseEntity.ok(items);
     }
+
+    /**
+     * GET /api/dashboard/item-sales?startDate=yyyy-MM-dd&endDate=yyyy-MM-dd
+     *
+     * Returns item-wise sale counts for any inclusive date range. Powers the
+     * dashboard's period selector: Yesterday, Day Before Yesterday,
+     * Last 7 Days, Last 14 Days, Last 28 Days, Last 3 Months.
+     *
+     * Example: /api/dashboard/item-sales?startDate=2026-07-15&endDate=2026-07-21
+     */
+    @GetMapping("/item-sales")
+    public ResponseEntity<List<ItemSaleCountDTO>> getItemSalesForRange(
+            @RequestParam String startDate,
+            @RequestParam String endDate) {
+        List<ItemSaleCountDTO> items = dashboardService.getItemSaleCountsForRange(startDate, endDate);
+        return ResponseEntity.ok(items);
+    }
 }

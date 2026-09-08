@@ -11,4 +11,8 @@ public class WebsiteOrderItemDTO {
     private Double  price;
     private Double  subTotal;
     private String  imageUrl;
+    private String  mainCategoryName;
+    private String  subCategoryName;
+    private String  selectedSize;
+    private String  selectedColor;
 }

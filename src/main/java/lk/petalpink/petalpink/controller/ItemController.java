@@ -27,8 +27,9 @@ public class ItemController {
     }
 
     @GetMapping
-    public List<ItemDTO> getAllItems() {
-        return itemService.getAllItems();
+    public List<ItemDTO> getAllItems(
+            @RequestParam(name = "includeInactive", defaultValue = "false") boolean includeInactive) {
+        return itemService.getAllItems(includeInactive);
     }
 
     @PutMapping

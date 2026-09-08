@@ -28,4 +28,16 @@ public class DashboardService {
     public List<ItemSaleCountDTO> getTodayItemSaleCounts() {
         return dashboardRepository.getTodayItemSaleCounts();
     }
+
+    /**
+     * Returns item-wise sale counts for any inclusive date range.
+     * Powers the dashboard's period selector (Yesterday, Day Before Yesterday,
+     * Last 7/14/28 Days, Last 3 Months).
+     *
+     * @param startDate "yyyy-MM-dd"
+     * @param endDate   "yyyy-MM-dd"
+     */
+    public List<ItemSaleCountDTO> getItemSaleCountsForRange(String startDate, String endDate) {
+        return dashboardRepository.getItemSaleCountsForRange(startDate, endDate);
+    }
 }
