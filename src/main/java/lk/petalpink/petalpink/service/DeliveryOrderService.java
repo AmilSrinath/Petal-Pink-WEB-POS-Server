@@ -148,4 +148,8 @@ public class DeliveryOrderService {
     public DeliveryOrderDTO getByOrderCode(String orderCode) {
         return deliveryOrderRepository.getByOrderCode(orderCode);
     }
+
+    public void updateOrderItemRemark(Integer orderDetailId, String remark) {
+        deliveryOrderRepository.updateOrderItemRemark(orderDetailId, remark);
+    }
 }

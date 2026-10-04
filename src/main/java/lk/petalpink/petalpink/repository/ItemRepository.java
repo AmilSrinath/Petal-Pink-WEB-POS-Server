@@ -202,4 +202,46 @@ public class ItemRepository {
         List<Integer> result = jdbcTemplate.queryForList(sql, Integer.class, itemName);
         return result.isEmpty() ? null : result.get(0);
     }
+
+    public String getNextItemCode(String prefix) {
+        if (prefix != null && !prefix.trim().isEmpty()) {
+            String p = prefix.trim();
+            String sql = "SELECT item_code_prefix FROM pos_main_item_tb WHERE item_code_prefix LIKE ? OR item_prefix = ?";
+            List<String> codes = jdbcTemplate.queryForList(sql, String.class, p + "%", p);
+            int maxNum = 0;
+            int padding = 2;
+            for (String c : codes) {
+                if (c == null) continue;
+                String digits = c.replaceAll("^[^0-9]*", "");
+                if (!digits.isEmpty()) {
+                    try {
+                        int n = Integer.parseInt(digits);
+                        if (n > maxNum) {
+                            maxNum = n;
+                            padding = Math.max(padding, digits.length());
+                        }
+                    } catch (NumberFormatException ignored) {}
+                }
+            }
+            int next = maxNum + 1;
+            return p + String.format("%0" + padding + "d", next);
+        } else {
+            String sql = "SELECT item_code_prefix FROM pos_main_item_tb WHERE item_code_prefix REGEXP '^[0-9]+$'";
+            List<String> codes = jdbcTemplate.queryForList(sql, String.class);
+            int maxNum = 0;
+            int padding = 3;
+            for (String c : codes) {
+                if (c == null) continue;
+                try {
+                    int n = Integer.parseInt(c);
+                    if (n > maxNum) {
+                        maxNum = n;
+                        padding = Math.max(padding, c.length());
+                    }
+                } catch (NumberFormatException ignored) {}
+            }
+            int next = maxNum + 1;
+            return String.format("%0" + padding + "d", next);
+        }
+    }
 }

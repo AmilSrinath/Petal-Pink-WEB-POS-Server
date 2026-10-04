@@ -1,7 +1,9 @@
 package lk.petalpink.petalpink.controller;
 
 import lk.petalpink.petalpink.dto.GrnDTO;
+import lk.petalpink.petalpink.dto.GrnItemDetailDTO;
 import lk.petalpink.petalpink.dto.GrnRequestDTO;
+import lk.petalpink.petalpink.dto.GrnUpdateRequestDTO;
 import lk.petalpink.petalpink.service.GrnService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -26,6 +28,16 @@ public class GrnController {
         return grnService.getAllGrns();
     }
 
+    @GetMapping("/{id}/items")
+    public List<GrnItemDetailDTO> getGrnItems(@PathVariable int id) {
+        return grnService.getGrnItems(id);
+    }
+
+    @GetMapping("/next-invoice-no")
+    public String getNextInvoiceNo() {
+        return grnService.getNextInvoiceNo();
+    }
+
     @PutMapping
     public String updateGrn(@RequestBody GrnDTO dto) {
         return grnService.updateGrn(dto);
@@ -39,5 +51,10 @@ public class GrnController {
     @PostMapping("/transaction")
     public String createGrnTransaction(@RequestBody GrnRequestDTO request) {
         return grnService.createGrnTransaction(request);
+    }
+
+    @PutMapping("/transaction")
+    public String updateGrnTransaction(@RequestBody GrnUpdateRequestDTO request) {
+        return grnService.updateGrnTransaction(request);
     }
 }

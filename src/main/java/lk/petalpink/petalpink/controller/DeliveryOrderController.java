@@ -123,4 +123,12 @@ public class DeliveryOrderController {
             return ResponseEntity.notFound().build();
         }
     }
+
+    @PatchMapping("/orders/items/{orderDetailId}/remark")
+    public ResponseEntity<String> updateOrderItemRemark(
+            @PathVariable Integer orderDetailId,
+            @RequestBody(required = false) String remark) {
+        deliveryOrderService.updateOrderItemRemark(orderDetailId, remark != null ? remark : "");
+        return ResponseEntity.ok("Item remark updated successfully");
+    }
 }

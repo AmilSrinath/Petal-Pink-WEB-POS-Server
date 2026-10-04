@@ -4,21 +4,19 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.time.LocalDate;
+import java.util.List;
 
 @AllArgsConstructor
 @NoArgsConstructor
 @Data
-public class GrnDTO {
+public class GrnUpdateRequestDTO {
     private Integer grnId;
     private String invoiceNo;
     private Integer supplierId;
-    private String supplierName;
+    private Integer stockLocationId;
+    private LocalDate createdDate;
     private Double totalPrice;
     private Double totalDiscount;
-    private LocalDate createdDate;
-    private Integer status;
-    private Integer stockLocationId;
-    private String stockLocationName;
     private Integer userId;
-    private Integer visible;
+    private List<GrnItemUpdateDTO> items;
 }

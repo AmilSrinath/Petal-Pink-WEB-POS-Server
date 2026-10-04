@@ -357,4 +357,11 @@ public class DeliveryOrderRepository {
             }
         }, orderCode);
     }
+
+    public void updateOrderItemRemark(Integer orderDetailId, String remark) {
+        jdbcTemplate.update(
+                "UPDATE pos_main_order_details_tb SET remark = ? WHERE order_detail_id = ?",
+                remark, orderDetailId
+        );
+    }
 }

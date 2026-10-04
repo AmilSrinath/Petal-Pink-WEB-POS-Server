@@ -52,4 +52,10 @@ public class ItemController {
         List<ItemDTO> items = itemService.getCourierBagItems();
         return ResponseEntity.ok(items);
     }
+
+    @GetMapping("/next-code")
+    public ResponseEntity<?> getNextItemCode(@RequestParam(name = "prefix", required = false) String prefix) {
+        String nextCode = itemService.getNextItemCode(prefix);
+        return ResponseEntity.ok(Map.of("nextCode", nextCode));
+    }
 }

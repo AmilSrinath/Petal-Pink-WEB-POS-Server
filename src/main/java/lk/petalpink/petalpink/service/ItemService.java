@@ -80,4 +80,8 @@ public class ItemService {
         int subCatId = configService.getCourierBagsSubcategory();
         return itemRepository.findBySubcategoryId(subCatId);
     }
+
+    public String getNextItemCode(String prefix) {
+        return itemRepository.getNextItemCode(prefix);
+    }
 }

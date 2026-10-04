@@ -19,4 +19,8 @@ public class StockDTO {
     private Double lowStockAlert;
     private String itemCodePrefix;
     private Integer isSellingItem;
+    private Integer mainItemCategoryId;
+    private String mainItemCategoryName;
+    private Integer subItemCategoryId;
+    private String subItemCategoryName;
 }

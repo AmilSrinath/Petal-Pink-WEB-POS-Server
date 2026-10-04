@@ -31,11 +31,18 @@ public class StockRepository {
      */
     public StockDTO findByStockId(int stockId) {
         String sql = """
-            SELECT s.*, i.item_code_prefix, u.unit_type AS unit_type_name
+            SELECT s.*,
+                   COALESCE(i.item_name, s.item_name) AS item_name,
+                   i.item_code_prefix, u.unit_type AS unit_type_name,
+                   COALESCE(i.main_item_category_id, sc.main_item_category_id) AS main_item_category_id,
+                   COALESCE(mc.main_item_category_name, sc.main_item_category_name) AS main_item_category_name,
+                   i.sub_item_category_id, sc.sub_item_category_name
             FROM pos_inv_stock_tb s
             LEFT JOIN pos_main_item_tb  i ON s.item_id      = i.item_id
             LEFT JOIN pos_main_unit_type_tb u ON s.unit_type = u.unit_type_id
-            WHERE s.stock_id = ? AND s.status != 0
+            LEFT JOIN pos_main_item_category_tb mc ON i.main_item_category_id = mc.main_item_category_id
+            LEFT JOIN pos_sub_item_category_tb sc ON i.sub_item_category_id = sc.sub_item_category_id
+            WHERE s.stock_id = ? AND (s.status IS NULL OR s.status != 0)
             LIMIT 1
             """;
         List<StockDTO> result = jdbcTemplate.query(
@@ -85,9 +92,17 @@ public class StockRepository {
 
     public StockDTO findByItemId(int itemId) {
         String sql = """
-            SELECT s.*, i.item_code_prefix
+            SELECT s.*,
+                   COALESCE(i.item_name, s.item_name) AS item_name,
+                   i.item_code_prefix, u.unit_type AS unit_type_name,
+                   COALESCE(i.main_item_category_id, sc.main_item_category_id) AS main_item_category_id,
+                   COALESCE(mc.main_item_category_name, sc.main_item_category_name) AS main_item_category_name,
+                   i.sub_item_category_id, sc.sub_item_category_name
             FROM pos_inv_stock_tb s
             LEFT JOIN pos_main_item_tb i ON s.item_id = i.item_id
+            LEFT JOIN pos_main_unit_type_tb u ON s.unit_type = u.unit_type_id
+            LEFT JOIN pos_main_item_category_tb mc ON i.main_item_category_id = mc.main_item_category_id
+            LEFT JOIN pos_sub_item_category_tb sc ON i.sub_item_category_id = sc.sub_item_category_id
             WHERE s.item_id = ? LIMIT 1
             """;
         List<StockDTO> result = jdbcTemplate.query(sql,
@@ -102,13 +117,25 @@ public class StockRepository {
         return jdbcTemplate.update(sql, quantityChange, itemId);
     }
 
+    public int updateUnitType(int itemId, int unitType) {
+        String sql = "UPDATE pos_inv_stock_tb SET unit_type = ? WHERE item_id = ?";
+        return jdbcTemplate.update(sql, unitType, itemId);
+    }
+
     public List<StockDTO> findAllMaster() {
         String sql = """
-            SELECT s.*, i.item_code_prefix, u.unit_type AS unit_type_name
+            SELECT s.*,
+                   COALESCE(i.item_name, s.item_name) AS item_name,
+                   i.item_code_prefix, u.unit_type AS unit_type_name,
+                   COALESCE(i.main_item_category_id, sc.main_item_category_id) AS main_item_category_id,
+                   COALESCE(mc.main_item_category_name, sc.main_item_category_name) AS main_item_category_name,
+                   i.sub_item_category_id, sc.sub_item_category_name
             FROM pos_inv_stock_tb s
             LEFT JOIN pos_main_item_tb i ON s.item_id = i.item_id
             LEFT JOIN pos_main_unit_type_tb u ON s.unit_type = u.unit_type_id
-            WHERE s.status != 0
+            LEFT JOIN pos_main_item_category_tb mc ON i.main_item_category_id = mc.main_item_category_id
+            LEFT JOIN pos_sub_item_category_tb sc ON i.sub_item_category_id = sc.sub_item_category_id
+            WHERE (s.status IS NULL OR s.status != 0)
             """;
         return jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(StockDTO.class));
     }
